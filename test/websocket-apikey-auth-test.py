@@ -19,6 +19,7 @@ BITMEX_URL = "wss://www.bitmex.com"
 
 VERB = "GET"
 ENDPOINT = "/realtime"
+
 def main():
     """Authenticate with the BitMEX API & request account information."""
     test_with_message()
