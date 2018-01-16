@@ -76,26 +76,4 @@ def id():
     return uuid.uuid4().bytes.encode('base64').rstrip('=\n')
 
 
-# Generates an API signature.
-# A signature is HMAC_SHA256(secret, verb + path + nonce + data), base64 encoded.
-# Verb must be uppercased, url is relative, nonce must be an increasing 64-bit integer
-# and the data, if present, must be JSON without whitespace between keys.
-def bitmex_signature(apiSecret, verb, url, nonce, postdict=None):
-    """Given an API Secret and data, create a BitMEX-compatible signature."""
-    data = ''
-    if postdict:
-        # separators remove spaces from json
-        # BitMEX expects signatures from JSON built without spaces
-        data = json.dumps(postdict, separators=(',', ':'))
-    parsedURL = urlparse.urlparse(url)
-    path = parsedURL.path
-    if parsedURL.query:
-        path = path + '?' + parsedURL.query
-    # print("Computing HMAC: %s" % verb + path + str(nonce) + data)
-    message = bytes(verb + path + str(nonce) + data).encode('utf-8')
 
-    signature = hmac.new(apiSecret, message, digestmod=hashlib.sha256).hexdigest()
-    return signature
-
-if __name__ == "__main__":
-    main()
