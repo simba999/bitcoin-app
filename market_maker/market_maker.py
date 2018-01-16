@@ -114,20 +114,29 @@ class ExchangeInterface:
             return {'price': -2**32}
         highest_buy = max(buys or [], key=lambda o: o['price'])
         return highest_buy if highest_buy else {'price': -2**32}
-	def get_position(self, symbol=None):
-	    if symbol is None:
-	        symbol = self.symbol
-	    return self.bitmex.position(symbol)
+
+    def get_lowest_sell(self):
+        sells = [o for o in self.get_orders() if o['side'] == 'Sell']
+        if not len(sells):
+            return {'price': 2**32}
+        lowest_sell = min(sells or [], key=lambda o: o['price'])
+        return lowest_sell if lowest_sell else {'price': 2**32}  # ought to be enough for anyone
+
+    def get_position(self, symbol=None):
+        if symbol is None:
+            symbol = self.symbol
+        return self.bitmex.position(symbol)
 
     def get_ticker(self, symbol=None):
         if symbol is None:
             symbol = self.symbol
         return self.bitmex.ticker_data(symbol)
 
-	def is_open(self):
-	    """Check that websockets are still open."""
-	    return not self.bitmex.ws.exited
-def check_market_open(self):
+    def is_open(self):
+        """Check that websockets are still open."""
+        return not self.bitmex.ws.exited
+
+    def check_market_open(self):
         instrument = self.get_instrument()
         if instrument["state"] != "Open" and instrument["state"] != "Closed":
             raise errors.MarketClosedError("The instrument %s is not open. State: %s" %
@@ -138,7 +147,13 @@ def check_market_open(self):
         instrument = self.get_instrument()
         if instrument['midPrice'] is None:
             raise errors.MarketEmptyError("Orderbook is empty, cannot quote")
-def create_bulk_orders(self, orders):
+
+    def amend_bulk_orders(self, orders):
+        if self.dry_run:
+            return orders
+        return self.bitmex.amend_bulk_orders(orders)
+
+    def create_bulk_orders(self, orders):
         if self.dry_run:
             return orders
         return self.bitmex.create_bulk_orders(orders)
