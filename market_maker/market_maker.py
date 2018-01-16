@@ -62,7 +62,32 @@ class ExchangeInterface:
             }
 
         return portfolio
-	def get_delta(self, symbol=None):
+
+    def calc_delta(self):
+        """Calculate currency delta for portfolio"""
+        portfolio = self.get_portfolio()
+        spot_delta = 0
+        mark_delta = 0
+        for symbol in portfolio:
+            item = portfolio[symbol]
+            if item['futureType'] == "Quanto":
+                spot_delta += item['currentQty'] * item['multiplier'] * item['spot']
+                mark_delta += item['currentQty'] * item['multiplier'] * item['markPrice']
+            elif item['futureType'] == "Inverse":
+                spot_delta += (item['multiplier'] / item['spot']) * item['currentQty']
+                mark_delta += (item['multiplier'] / item['markPrice']) * item['currentQty']
+            elif item['futureType'] == "Linear":
+                spot_delta += item['multiplier'] * item['currentQty']
+                mark_delta += item['multiplier'] * item['currentQty']
+        basis_delta = mark_delta - spot_delta
+        delta = {
+            "spot": spot_delta,
+            "mark_price": mark_delta,
+            "basis": basis_delta
+        }
+        return delta
+
+    def get_delta(self, symbol=None):
         if symbol is None:
             symbol = self.symbol
         return self.get_position(symbol)['currentQty']
@@ -81,6 +106,7 @@ class ExchangeInterface:
         if self.dry_run:
             return []
         return self.bitmex.open_orders()
+
 
     def get_highest_buy(self):
         buys = [o for o in self.get_orders() if o['side'] == 'Buy']
