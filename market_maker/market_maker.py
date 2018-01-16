@@ -62,3 +62,27 @@ class ExchangeInterface:
             }
 
         return portfolio
+	def get_position(self, symbol=None):
+	    if symbol is None:
+	        symbol = self.symbol
+	    return self.bitmex.position(symbol)
+
+    def get_ticker(self, symbol=None):
+        if symbol is None:
+            symbol = self.symbol
+        return self.bitmex.ticker_data(symbol)
+
+	def is_open(self):
+	    """Check that websockets are still open."""
+	    return not self.bitmex.ws.exited
+def check_market_open(self):
+        instrument = self.get_instrument()
+        if instrument["state"] != "Open" and instrument["state"] != "Closed":
+            raise errors.MarketClosedError("The instrument %s is not open. State: %s" %
+                                           (self.symbol, instrument["state"]))
+
+    def check_if_orderbook_empty(self):
+        """This function checks whether the order book is empty"""
+        instrument = self.get_instrument()
+        if instrument['midPrice'] is None:
+            raise errors.MarketEmptyError("Orderbook is empty, cannot quote")
