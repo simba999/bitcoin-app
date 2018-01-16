@@ -62,6 +62,32 @@ class ExchangeInterface:
             }
 
         return portfolio
+	def get_delta(self, symbol=None):
+        if symbol is None:
+            symbol = self.symbol
+        return self.get_position(symbol)['currentQty']
+
+    def get_instrument(self, symbol=None):
+        if symbol is None:
+            symbol = self.symbol
+        return self.bitmex.instrument(symbol)
+
+    def get_margin(self):
+        if self.dry_run:
+            return {'marginBalance': float(settings.DRY_BTC), 'availableFunds': float(settings.DRY_BTC)}
+        return self.bitmex.funds()
+
+    def get_orders(self):
+        if self.dry_run:
+            return []
+        return self.bitmex.open_orders()
+
+    def get_highest_buy(self):
+        buys = [o for o in self.get_orders() if o['side'] == 'Buy']
+        if not len(buys):
+            return {'price': -2**32}
+        highest_buy = max(buys or [], key=lambda o: o['price'])
+        return highest_buy if highest_buy else {'price': -2**32}
 	def get_position(self, symbol=None):
 	    if symbol is None:
 	        symbol = self.symbol
@@ -86,3 +112,12 @@ def check_market_open(self):
         instrument = self.get_instrument()
         if instrument['midPrice'] is None:
             raise errors.MarketEmptyError("Orderbook is empty, cannot quote")
+def create_bulk_orders(self, orders):
+        if self.dry_run:
+            return orders
+        return self.bitmex.create_bulk_orders(orders)
+
+    def cancel_bulk_orders(self, orders):
+        if self.dry_run:
+            return orders
+        return self.bitmex.cancel([order['orderID'] for order in orders])
