@@ -301,3 +301,23 @@ logger.info("Current XBT Balance: %.6f" % XBt_to_XBT(self.start_XBt))
                 start_position = self.start_position_buy
 
         return math.toNearest(start_position * (1 + settings.INTERVAL) ** index, self.instrument['tickSize'])
+ ###
+    # Orders
+    ###
+
+    def place_orders(self):
+        """Create order items for use in convergence."""
+
+        buy_orders = []
+        sell_orders = []
+        # Create orders from the outside in. This is intentional - let's say the inner order gets taken;
+        # then we match orders from the outside in, ensuring the fewest number of orders are amended and only
+        # a new order is created in the inside. If we did it inside-out, all orders would be amended
+        # down and a new order would be created at the outside.
+        for i in reversed(range(1, settings.ORDER_PAIRS + 1)):
+            if not self.long_position_limit_exceeded():
+                buy_orders.append(self.prepare_order(-i))
+            if not self.short_position_limit_exceeded():
+                sell_orders.append(self.prepare_order(i))
+
+        return self.converge_orders(buy_orders, sell_orders)
