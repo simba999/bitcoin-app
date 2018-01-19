@@ -194,3 +194,24 @@ class ExchangeInterface:
         if self.dry_run:
             return orders
         return self.bitmex.cancel([order['orderID'] for order in orders])
+class OrderManager:
+    def __init__(self):
+        self.exchange = ExchangeInterface(settings.DRY_RUN)
+        # Once exchange is created, register exit handler that will always cancel orders
+        # on any error.
+        atexit.register(self.exit)
+        signal.signal(signal.SIGTERM, self.exit)
+
+        logger.info("Using symbol %s." % self.exchange.symbol)
+
+    def init(self):
+        if settings.DRY_RUN:
+            logger.info("Initializing dry run. Orders printed below represent what would be posted to BitMEX.")
+        else:
+            logger.info("Order Manager initializing, connecting to BitMEX. Live run: executing real trades.")
+
+        self.start_time = datetime.now()
+        self.instrument = self.exchange.get_instrument()
+        self.starting_qty = self.exchange.get_delta()
+        self.running_qty = self.starting_qty
+        self.reset()
