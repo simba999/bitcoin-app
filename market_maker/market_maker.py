@@ -215,3 +215,23 @@ class OrderManager:
         self.starting_qty = self.exchange.get_delta()
         self.running_qty = self.starting_qty
         self.reset()
+
+    def reset(self):
+        self.exchange.cancel_all_orders()
+        self.sanity_check()
+        self.print_status()
+
+        # Create orders and converge.
+        self.place_orders()
+
+        if settings.DRY_RUN:
+            sys.exit()
+
+    def print_status(self):
+        """Print the current MM status."""
+
+        margin = self.exchange.get_margin()
+        position = self.exchange.get_position()
+        self.running_qty = self.exchange.get_delta()
+        tickLog = self.exchange.get_instrument()['tickLog']
+        self.start_XBt = margin["marginBalance"]
