@@ -235,3 +235,36 @@ class OrderManager:
         self.running_qty = self.exchange.get_delta()
         tickLog = self.exchange.get_instrument()['tickLog']
         self.start_XBt = margin["marginBalance"]
+logger.info("Current XBT Balance: %.6f" % XBt_to_XBT(self.start_XBt))
+        logger.info("Current Contract Position: %d" % self.running_qty)
+        if settings.CHECK_POSITION_LIMITS:
+            logger.info("Position limits: %d/%d" % (settings.MIN_POSITION, settings.MAX_POSITION))
+        if position['currentQty'] != 0:
+            logger.info("Avg Cost Price: %.*f" % (tickLog, float(position['avgCostPrice'])))
+            logger.info("Avg Entry Price: %.*f" % (tickLog, float(position['avgEntryPrice'])))
+        logger.info("Contracts Traded This Run: %d" % (self.running_qty - self.starting_qty))
+        logger.info("Total Contract Delta: %.4f XBT" % self.exchange.calc_delta()['spot'])
+
+    def get_ticker(self):
+        ticker = self.exchange.get_ticker()
+        tickLog = self.exchange.get_instrument()['tickLog']
+
+        # Set up our buy & sell positions as the smallest possible unit above and below the current spread
+        # and we'll work out from there. That way we always have the best price but we don't kill wide
+        # and potentially profitable spreads.
+        self.start_position_buy = ticker["buy"] + self.instrument['tickSize']
+        self.start_position_sell = ticker["sell"] - self.instrument['tickSize']
+
+        # If we're maintaining spreads and we already have orders in place,
+        # make sure they're not ours. If they are, we need to adjust, otherwise we'll
+        # just work the orders inward until they collide.
+        if settings.MAINTAIN_SPREADS:
+            if ticker['buy'] == self.exchange.get_highest_buy()['price']:
+                self.start_position_buy = ticker["buy"]
+            if ticker['sell'] == self.exchange.get_lowest_sell()['price']:
+                self.start_position_sell = ticker["sell"]
+
+        # Back off if our spread is too small.
+        if self.start_position_buy * (1.00 + settings.MIN_SPREAD) > self.start_position_sell:
+            self.start_position_buy *= (1.00 - (settings.MIN_SPREAD / 2))
+            self.start_position_sell *= (1.00 + (settings.
