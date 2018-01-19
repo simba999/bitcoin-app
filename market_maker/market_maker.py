@@ -32,6 +32,25 @@ class ExchangeInterface:
                                     apiKey=settings.API_KEY, apiSecret=settings.API_SECRET,
                                     orderIDPrefix=settings.ORDERID_PREFIX, postOnly=settings.POST_ONLY)
 
+    def cancel_order(self, order):
+        tickLog = self.get_instrument()['tickLog']
+        logger.info("Canceling: %s %d @ %.*f" % (order['side'], order['orderQty'], tickLog, order['price']))
+        while True:
+            try:
+                self.bitmex.cancel(order['orderID'])
+                sleep(settings.API_REST_INTERVAL)
+            except ValueError as e:
+                logger.info(e)
+                sleep(settings.API_ERROR_INTERVAL)
+            else:
+                break
+
+    def cancel_all_orders(self):
+        if self.dry_run:
+            return
+
+        logger.info("Resetting current position. Canceling all existing orders.")
+        tickLog = self.get_instrument()['tickLog']
     def get_portfolio(self):
         contracts = settings.CONTRACTS
         portfolio = {}
