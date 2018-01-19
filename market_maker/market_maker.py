@@ -267,4 +267,37 @@ logger.info("Current XBT Balance: %.6f" % XBt_to_XBT(self.start_XBt))
         # Back off if our spread is too small.
         if self.start_position_buy * (1.00 + settings.MIN_SPREAD) > self.start_position_sell:
             self.start_position_buy *= (1.00 - (settings.MIN_SPREAD / 2))
-            self.start_position_sell *= (1.00 + (settings.
+           self.start_position_sell *= (1.00 + (settings.MIN_SPREAD / 2))
+
+        # Midpoint, used for simpler order placement.
+        self.start_position_mid = ticker["mid"]
+        logger.info(
+            "%s Ticker: Buy: %.*f, Sell: %.*f" %
+            (self.instrument['symbol'], tickLog, ticker["buy"], tickLog, ticker["sell"])
+        )
+        logger.info('Start Positions: Buy: %.*f, Sell: %.*f, Mid: %.*f' %
+                    (tickLog, self.start_position_buy, tickLog, self.start_position_sell,
+                     tickLog, self.start_position_mid))
+        return ticker
+
+    def get_price_offset(self, index):
+        """Given an index (1, -1, 2, -2, etc.) return the price for that side of the book.
+           Negative is a buy, positive is a sell."""
+        # Maintain existing spreads for max profit
+        if settings.MAINTAIN_SPREADS:
+            start_position = self.start_position_buy if index < 0 else self.start_position_sell
+            # First positions (index 1, -1) should start right at start_position, others should branch from there
+            index = index + 1 if index < 0 else index - 1
+        else:
+            # Offset mode: ticker comes from a reference exchange and we define an offset.
+            start_position = self.start_position_buy if index < 0 else self.start_position_sell
+
+            # If we're attempting to sell, but our sell price is actually lower than the buy,
+            # move over to the sell side.
+            if index > 0 and start_position < self.start_position_buy:
+                start_position = self.start_position_sell
+            # Same for buys.
+            if index < 0 and start_position > self.start_position_sell:
+                start_position = self.start_position_buy
+
+        return math.toNearest(start_position * (1 + settings.INTERVAL) ** index, self.instrument['tickSize'])
