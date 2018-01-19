@@ -51,6 +51,19 @@ class ExchangeInterface:
 
         logger.info("Resetting current position. Canceling all existing orders.")
         tickLog = self.get_instrument()['tickLog']
+
+        # In certain cases, a WS update might not make it through before we call this.
+        # For that reason, we grab via HTTP to ensure we grab them all.
+        orders = self.bitmex.http_open_orders()
+
+        for order in orders:
+            logger.info("Canceling: %s %d @ %.*f" % (order['side'], order['orderQty'], tickLog, order['price']))
+
+        if len(orders):
+            self.bitmex.cancel([order['orderID'] for order in orders])
+
+        sleep(settings.API_REST_INTERVAL)
+
     def get_portfolio(self):
         contracts = settings.CONTRACTS
         portfolio = {}
